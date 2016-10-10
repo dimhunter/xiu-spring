@@ -1,0 +1,116 @@
+<?com.shen.xml version="1.0" encoding="UTF-8"?>
+<beans  xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:aop="http://www.springframework.org/schema/aop"
+        xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+           
+   <bean id="helloWorldService" class="aop.schema.HelloWorldServiceImpl"/>
+
+   <bean id="aspect" class="aop.schema.HelloWorldAspect"/>
+   
+   <bean id="beforeAdviceAaa" class="aop.schema.BeforeAdviceImpl" />
+	
+	<!--
+	在Spring配置文件中，所以AOP相关定义必须放在<aop:config>标签下，该标签下可以有<aop:pointcut>、<aop:advisor>、
+	<aop:aspect>标签，配置【顺序不可变】。
+	-->
+    <aop:config>
+    	<!--
+    	Advisor表示只有一个通知和一个切入点的切面，由于Spring AOP都是基于AOP联盟的拦截器模型的环绕通知的，所以
+		引入Advisor来支持各种通知类型（如前置通知等5种），Advisor概念来自于Spring1.2对AOP的支持，在AspectJ中没
+		有相应的概念对应。
+		Advisor可以使用<aop:config>标签下的<aop:advisor>标签定义：
+			pointcut和pointcut-ref：二者选一，指定切入点表达式；
+			advice-ref：引用通知API实现Bean，如前置通知接口为MethodBeforeAdvice；
+		
+		在此我们只介绍了前置通知API，其他类型的在后边章节介绍。
+		不推荐使用Advisor，除了在进行事务控制的情况下，其他情况一般不推荐使用该方式，该方式属于侵入式设计，必须实现通知API。
+    	-->
+    	<aop:advisor pointcut="execution(* aop.schema..*.sayAdvisorBefore(..))"
+              advice-ref="beforeAdviceAaa" />
+    	<!--
+        <aop:advisor pointcut="execution(* cn.javass..*.sayAdvisorBefore(..))"
+                     advice-ref="beforeAdvice"/>
+		-->
+        <aop:aspect ref="aspect">
+        	<!--
+        	一，前置通知，在【切入点选择】的方法（此处配置的是sayBefore方法）之前执行，通过<aop:aspect>标签下的<aop:before>标签声明：
+        	1）切入点匹配：在配置中使用“execution(* aop.aspectj..*.sayBefore(..)) ”匹配【目标】方法sayBefore，且使用
+					“args(param)”匹配目标方法只有一个参数且传入的参数类型为通知实现方法中同名的参数类型；
+			2）目标方法定义：使用method=" beforeAdvice(java.lang.String) "指定【前置通知】实现方法，且该通知有一个参数类
+					型为java.lang.String参数；
+			3）目标方法参数命名：其中使用arg-names=" param "指定通知实现方法参数名为“param”，【参数名字必须是param，差一个字母都报错】
+			切入点中使用，“args(param)”匹配的目标方法参数将自动传递给通知实现方法同名参数。
+        	-->
+            <aop:before pointcut="execution(* aop.schema..*.sayBefore(..)) and args(param)" 
+                  method="beforeAdvice(java.lang.String)" 
+                  arg-names="param"/>
+                   
+            <!--
+		            二、后置返回通知：在【切入点选择】的方法【正常返回(没有异常)】时执行，通过<aop:aspect>标签下的<aop:after-returning>标签声明：
+		        pointcut和pointcut-ref：同前置通知同义；
+				method：同前置通知同义；
+				arg-names：同前置通知同义；
+				returning：定义一个名字，该名字用于匹配通知实现方法的一个参数名，当目标方法执行正常返回后，将把目标方法返回值传给通知方法；
+					returning限定了只有目标方法返回值匹配与通知方法相应参数类型时才能执行后置返回通知，否则不执行，对于returning对应的通知
+					方法参数为Object类型将匹配任何目标返回值。
+            -->
+            <aop:after-returning pointcut="execution(* aop.schema..*.sayAfterReturning(..))" 
+                  method="afterReturningAdvice" 
+                  arg-names="retVal"
+                  returning="retVal"/>
+                  
+            <!--
+			三、后置异常通知：在切入点选择的方法抛出异常时执行，通过<aop:aspect>标签下的<aop:after-throwing>标签声明：
+				pointcut和pointcut-ref：同前置通知同义；
+				method：同前置通知同义；
+				arg-names：同前置通知同义；
+				throwing：定义一个名字，该名字用于匹配通知实现方法的一个参数名，当目标方法抛出异常返回后，将把目标
+				方法抛出的异常传给通知方法；throwing限定了只有目标方法抛出的异常匹配与通知方法相应参数异常类型时才能执行
+				后置异常通知，否则不执行，对于throwing对应的通知方法参数为Throwable类型将匹配任何异常。
+            -->    
+			<aop:after-throwing pointcut="execution(* aop.schema..*.sayAfterThrowing(..))" 
+				method="afterThrowingAdvice" 
+			  	arg-names="com.shen.exception"
+			  	throwing="com.shen.exception" />
+			
+			<!--
+			四、后置最终通知：在切入点选择的方法返回时执行，不管是【正常返回还是抛出异常】都】执行，通过<aop:aspect>标签下
+						的<aop:after >标签声明：
+				pointcut和pointcut-ref：同前置通知同义；
+				method：同前置通知同义；
+				arg-names：同前置通知同义；
+			-->  	
+			<aop:after pointcut="execution(* aop.schema..*.sayAfterFinally(..))" 
+                 method="afterFinallyAdvice"/>
+           	
+			<!--
+			五、环绕通知：环绕着在切入点选择的连接点处的方法所执行的通知，环绕通知非常强大，可以决定目标方法是否执行，什么时候
+			执行，执行时是否需要替换方法参数，执行完毕是否需要替换返回值，可通过<aop:aspect>标签下的<aop:around >标签声明：
+			
+			-->           	
+			<aop:around pointcut="execution(* aop.schema..*.sayAround(..))" 
+                  method="aroundAdvice"/>
+            <!--
+            Spring引入允许为目标对象引入新的接口，通过在< aop:aspect>标签内使用< aop:declare-parents>标签进行引入，
+            	定义方式如下：
+	            types-matching：匹配需要引入接口的目标对象的AspectJ语法类型表达式；
+				implement-interface：定义需要引入的接口；
+				default-impl和delegate-ref：定义引入接口的默认实现，二者选一，default-impl是接口的默认实现类全限定
+				名，而delegate-ref是默认的实现的委托Bean名；
+            -->
+            <aop:declare-parents types-matching="aop.schema.HelloWorldService+" 
+                 implement-interface="aop.schema.IntroductionService"
+                 default-impl="aop.schema.IntroductionServiceImpl"/>
+        </aop:aspect>
+    </aop:config>
+        
+   
+</beans>
